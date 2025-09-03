@@ -44,14 +44,11 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 # Set up user and group (fixed values for yonch user)
 ARG UNAME=yonch
 ARG UID=501
-ARG GNAME=staff
-ARG GID=20
+ARG GNAME=yonch
+ARG GID=501
 
 RUN set -x; \
-    # These commands are allowed to fail (it happens for root, for example).
-    # The result will be checked in the next RUN.
-    userdel -r `getent passwd ${UID} | cut -d : -f 1` > /dev/null 2>&1; \
-    groupdel -f `getent group ${GID} | cut -d : -f 1` > /dev/null 2>&1; \
+    # Create group and user with matching IDs
     groupadd -g ${GID} ${GNAME}; \
     useradd -u $UID -g $GID -G sudo -ms /bin/bash ${UNAME}; \
     mkdir -p /home/${UNAME}; \
