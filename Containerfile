@@ -29,15 +29,57 @@ RUN apt-get update && apt-get install -y \
     curl \
     kmod \
     r-base \
+    openssh-server \
+    mosh \
+    tmux \
+    jq \
+    sudo \
     && rm -rf /var/lib/apt/lists/*
 
-    RUN ln -s /usr/bin/clang-19 /usr/bin/clang
+RUN ln -s /usr/bin/clang-19 /usr/bin/clang
 
 # Install Rust
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 
-# Set the working directory
-WORKDIR /workspace
+# Set up user and group (fixed values for yonch user)
+ARG UNAME=yonch
+ARG UID=501
+ARG GNAME=staff
+ARG GID=20
 
-# Keep container running
-CMD ["sleep", "infinity"]
+RUN set -x; \
+    # These commands are allowed to fail (it happens for root, for example).
+    # The result will be checked in the next RUN.
+    userdel -r `getent passwd ${UID} | cut -d : -f 1` > /dev/null 2>&1; \
+    groupdel -f `getent group ${GID} | cut -d : -f 1` > /dev/null 2>&1; \
+    groupadd -g ${GID} ${GNAME}; \
+    useradd -u $UID -g $GID -G sudo -ms /bin/bash ${UNAME}; \
+    mkdir -p /home/${UNAME}; \
+    chown -R ${UNAME}:${GNAME} /home/${UNAME}; \
+    echo "${UNAME} ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+
+RUN set -ex; \
+    mkdir -p /var/run/sshd; \
+    mkdir -p /home/${UNAME}/.ssh; \
+    chown ${UNAME}:${GNAME} /home/${UNAME}/.ssh; \
+    chmod 700 /home/${UNAME}/.ssh
+
+USER ${UNAME}:${GNAME}
+WORKDIR /home/yonch
+
+RUN set -ex; \
+    ln -sf /workspace/.ccache /home/${UNAME}/.ccache; \
+    ln -sf /workspace/.aws /home/${UNAME}/.aws; \
+    ln -sf /workspace/.claude /home/${UNAME}/.claude; \
+    mkdir -p /home/${UNAME}/.config; \
+    ln -sf /workspace/.config/gh /home/${UNAME}/.config/gh
+
+# Verification
+RUN set -ex; \
+    id | grep "uid=${UID}(${UNAME}) gid=${GID}(${GNAME})"; \
+    sudo ls; \
+    pwd | grep "^/home/yonch"
+
+EXPOSE 22
+
+CMD ["/bin/bash", "-c", "sudo /usr/sbin/sshd && exec bash"]
