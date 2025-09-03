@@ -35,6 +35,7 @@ RUN apt-get update && apt-get install -y \
     jq \
     sudo \
     locales \
+    nano \
     && rm -rf /var/lib/apt/lists/*
 
 RUN ln -s /usr/bin/clang-19 /usr/bin/clang
