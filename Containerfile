@@ -34,9 +34,15 @@ RUN apt-get update && apt-get install -y \
     tmux \
     jq \
     sudo \
+    locales \
     && rm -rf /var/lib/apt/lists/*
 
 RUN ln -s /usr/bin/clang-19 /usr/bin/clang
+
+# Configure locale
+RUN set -ex; \
+    locale-gen en_US.UTF-8; \
+    update-locale LANG=en_US.UTF-8
 
 # Install Rust
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
